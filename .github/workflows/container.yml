@@ -22,8 +22,8 @@ jobs:
       - name: Run Accuknox Container
         uses: accuknox/container-scan-action@v1.1.0
         with:
-          endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
-          token: ${{ secrets.ACCUKNOX_TOKEN }}
-          label: ${{ secrets.ACCUKNOX_LABEL }}
-          image: "github-action-test"
+          accuknox_endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
+          accuknox_token: ${{ secrets.ACCUKNOX_TOKEN }}
+          accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
+          image_name: "github-action-test"
           tag: "latest"
