@@ -20,7 +20,7 @@ jobs:
           echo "Successfully built Docker image: $IMAGE_NAME:$IMAGE_TAG"
 
       - name: Run Accuknox Container
-        uses: accuknox/container-scan-action@1.0.0
+        uses: accuknox/container-scan-action@v1.1.0
         with:
           endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
           token: ${{ secrets.ACCUKNOX_TOKEN }}
