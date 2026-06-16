@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}ShopPy — Cart{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Your Cart</h1>
+</div>
+
+{% if items %}
+  <div class="cart-wrapper">
+    <table class="cart-table">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Subtotal</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>${{ "%.2f"|format(item.price) }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('update_qty', product_id=item.id) }}" class="qty-form">
+                <input type="number" name="qty" value="{{ item.qty }}" min="0" class="qty-input" />
+                <button type="submit" class="btn btn-sm">Update</button>
+              </form>
+            </td>
+            <td>${{ "%.2f"|format(item.subtotal) }}</td>
+            <td>
+              <a href="{{ url_for('remove_from_cart', product_id=item.id) }}" class="btn btn-danger btn-sm">Remove</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="cart-summary">
+      <p class="total-label">Total: <span class="total-amount">${{ "%.2f"|format(total) }}</span></p>
+      <div class="cart-actions">
+        <a href="{{ url_for('clear_cart') }}" class="btn btn-outline">Clear Cart</a>
+        <a href="{{ url_for('checkout') }}" class="btn btn-primary">Proceed to Checkout</a>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <div class="empty-cart">
+    <p>Your cart is empty.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">Shop Now</a>
+  </div>
+{% endif %}
+{% endblock %}
