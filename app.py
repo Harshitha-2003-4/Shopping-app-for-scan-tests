@@ -3,6 +3,9 @@ from flask import Flask, render_template, redirect, url_for, session, request, f
 app = Flask(__name__)
 app.secret_key = "shopping_secret_key"
 
+AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
+AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+
 PRODUCTS = [
     {"id": 1, "name": "Wireless Headphones", "price": 49.99, "image": "https://placehold.co/300x200?text=Headphones", "category": "Electronics"},
     {"id": 2, "name": "Running Shoes", "price": 79.99, "image": "https://placehold.co/300x200?text=Shoes", "category": "Fashion"},
