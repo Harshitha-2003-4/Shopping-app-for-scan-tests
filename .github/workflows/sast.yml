@@ -1,9 +1,9 @@
-name: AccuKnox SAST Scan Workflow
+name: AccuKnox SAST pengrep-Scan Workflow
 
 on:
   push:
     branches:
-
+      - main
 
 jobs:
   tests:

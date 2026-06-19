@@ -1,4 +1,4 @@
-name: AccuKnox SAST Workflow
+name: AccuKnox SAST sonarqube Workflow
 on:
   push:
     branches:

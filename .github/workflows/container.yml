@@ -1,4 +1,4 @@
-name: AccuKnox Scan Workflow
+name: AccuKnox container-Scan Workflow
 
 on:
   push:
