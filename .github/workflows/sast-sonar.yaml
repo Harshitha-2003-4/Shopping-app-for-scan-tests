@@ -11,14 +11,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create sonar-project.properties
-        run: |
-          cat > sonar-project.properties <<EOF
-          sonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
-          sonar.organization=${{ secrets.SONAR_ORG_ID }}
-          sonar.host.url=${{ secrets.SONAR_HOST_URL }}
-          EOF
-
       - name: Run AccuKnox SAST
         uses: accuknox/sast-scan-action@latest
         with:
@@ -26,7 +18,7 @@ jobs:
           sonar_project_key: ${{ secrets.SONAR_PROJECT_KEY }}
           sonar_token: ${{ secrets.SONAR_TOKEN }}
           sonar_host_url: ${{ secrets.SONAR_HOST_URL }}
-          sonar_organization: ${{ secrets.SONAR_ORG_ID }}
+          sonar_organization_id: ${{ secrets.SONAR_ORG_ID }}
           accuknox_endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
           accuknox_token: ${{ secrets.ACCUKNOX_TOKEN }}
           accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
