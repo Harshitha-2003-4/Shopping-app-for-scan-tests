@@ -29,4 +29,5 @@ jobs:
           accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
           severity: "HIGH"
           accuknox_ai_analysis: "false"
+          gitleaks: true
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
