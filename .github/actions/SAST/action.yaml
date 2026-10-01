@@ -1,3 +1,4 @@
+# SAST action configuration
 name: "Accuknox SAST: Opengrep"
 description: "Run AccuKnox SAST scan on the repository; results are automatically uploaded to CSPM panel."
 
