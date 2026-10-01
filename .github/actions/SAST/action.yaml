@@ -1,123 +1,147 @@
-# SAST action configuration
-name: "Accuknox SAST: Opengrep"
-description: "Run AccuKnox SAST scan on the repository; results are automatically uploaded to CSPM panel."
+name: "AccuKnox Secret Scan"
+description: "Run AccuKnox secret scan with TruffleHog. Set gitleaks to true to scan with Gitleaks SARIF (data type DS, secret scan findings)."
 
 branding:
   icon: "shield"
   color: "purple"
 
 inputs:
-  soft_fail:
-    description: "Do not fail the pipeline if scan finds issues"
-    required: false
-    default: "true"
-  pipeline_id:
-    description: "Pipeline/Job ID to correlate with CI/CD runs"
-    required: false
-    default: ${{ github.run_id }}
-  job_url:
-    description: "URL for the current GitHub job"
-    required: false
-    default: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  accuknox_endpoint:
-    description: "CSPM panel endpoint URL"
-    required: true
   accuknox_token:
-    description: "Token for authenticating with CSPM panel"
+    description: "CSPM token"
+    required: true
+  accuknox_endpoint:
+    description: "CSPM Console endpoint URL"
     required: true
   accuknox_label:
-    description: "Label in AccuKnox SaaS for scan results"
+    description: "Label for scan results in AccuKnox Console"
     required: true
-  severity:
-    description: "Comma-separated severities: MEDIUM, HIGH, CRITICAL"
-    required: false
-    default: "HIGH"
-  accuknox_ai_analysis:
-    description: "Enable AI analysis (CodeAssure). Requires a model key in the environment."
-    required: false
-    default: "false"
-  anthropic_api_key:
-    description: "Optional Anthropic API key (exported as ANTHROPIC_API_KEY for CodeAssure)"
+  results:
+    description: "Which result types to include: verified, unknown, unverified, filtered_unverified"
     required: false
     default: ""
-  scanner_version:
-    description: "aspm-scanner-cli GitHub release tag"
+  branch:
+    description: "Git branch to scan. Use 'all-branches' to scan all branches"
     required: false
-    default: "v0.15.1"
+    default: ""
+  exclude_paths:
+    description: "Comma-separated list of paths to exclude from scanning"
+    required: false
+    default: ""
+  additional_arguments:
+    description: "Extra arguments to pass to the secret scanning tool"
+    required: false
+    default: ""
+  gitleaks:
+    description: "Use Gitleaks instead of TruffleHog. true writes SARIF and uploads as data type DS (secret scan findings)."
+    required: false
+    default: "false"
+  soft_fail:
+    description: "Do not return an error code if there are failed checks"
+    required: false
+    default: "false"
+  base_command:
+    description: "Override the base command used to run the scan (optional)"
+    required: false
+    default: ""
+  upload_results:
+    description: "Upload scan results as GitHub artifact"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
   steps:
-    - name: Run AccuKnox SAST Scan
+    - name: Run AccuKnox Secret Scan
       shell: bash
       env:
-        SOFT_FAIL: ${{ inputs.soft_fail }}
-        PIPELINE_ID: ${{ inputs.pipeline_id }}
-        JOB_URL: ${{ inputs.job_url }}
-        ACCUKNOX_ENDPOINT: ${{ inputs.accuknox_endpoint }}
         ACCUKNOX_TOKEN: ${{ inputs.accuknox_token }}
         ACCUKNOX_LABEL: ${{ inputs.accuknox_label }}
-        SEVERITY: ${{ inputs.severity }}
-        ACCUKNOX_AI_ANALYSIS: ${{ inputs.accuknox_ai_analysis }}
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
-        SCANNER_VERSION: ${{ inputs.scanner_version }}
+        ACCUKNOX_ENDPOINT: ${{ inputs.accuknox_endpoint }}
+        RESULTS: ${{ inputs.results }}
+        BRANCH: ${{ inputs.branch }}
+        EXCLUDE_PATHS: ${{ inputs.exclude_paths }}
+        ADDITIONAL_ARGUMENTS: ${{ inputs.additional_arguments }}
+        GITLEAKS: ${{ inputs.gitleaks }}
+        SOFT_FAIL: ${{ inputs.soft_fail }}
+        BASE_COMMAND: ${{ inputs.base_command }}
+        UPLOAD_RESULTS: ${{ inputs.upload_results }}
       run: |
-        set -euo pipefail
+        set -e
 
-        if [ -z "$ACCUKNOX_ENDPOINT" ] || [ -z "$ACCUKNOX_TOKEN" ] || [ -z "$ACCUKNOX_LABEL" ]; then
-          echo "ERROR: ACCUKNOX_ENDPOINT, ACCUKNOX_TOKEN, and ACCUKNOX_LABEL must be set!"
+        if [ -z "$ACCUKNOX_TOKEN" ] || [ -z "$ACCUKNOX_LABEL" ] || [ -z "$ACCUKNOX_ENDPOINT" ]; then
+          echo "ERROR: token, label, and endpoint must be provided!"
           exit 1
         fi
 
-        SCANNER_VERSION="${SCANNER_VERSION//[$'\t\r\n ']}"
-        if [ -z "$SCANNER_VERSION" ]; then
-          SCANNER_VERSION="v0.15.1"
+        GITLEAKS="${GITLEAKS//[$'\t\r\n ']}"
+        GITLEAKS="$(printf '%s' "$GITLEAKS" | tr '[:upper:]' '[:lower:]')"
+        if [ -z "$GITLEAKS" ]; then
+          GITLEAKS="false"
         fi
-        case "$(uname -s)-$(uname -m)" in
-          Linux-x86_64|Linux-amd64)
-            ASSET="accuknox-aspm-scanner-linux-amd64"
-            ;;
-          Darwin-arm64)
-            ASSET="accuknox-aspm-scanner-darwin-arm64"
-            ;;
-          *)
-            echo "ERROR: Native OpenGrep action supports Linux x86_64 and macOS arm64. Got $(uname -s) $(uname -m)."
-            exit 1
-            ;;
-        esac
+        if [ "$GITLEAKS" != "true" ] && [ "$GITLEAKS" != "false" ]; then
+          echo "ERROR: gitleaks must be 'true' or 'false' (got '$GITLEAKS')"
+          exit 1
+        fi
+        if [ "$GITLEAKS" = "true" ]; then
+          ENGINE="gitleaks"
+        else
+          ENGINE="trufflehog"
+        fi
 
-        echo "Downloading AccuKnox ASPM Scanner ${SCANNER_VERSION} (${ASSET})..."
-        curl -fL "https://github.com/accuknox/aspm-scanner-cli/releases/download/${SCANNER_VERSION}/${ASSET}" \
-          -o accuknox-aspm-scanner
+        echo "Downloading AccuKnox ASPM Scanner..."
+        curl -L https://github.com/accuknox/aspm-scanner-cli/releases/download/v0.15.1/accuknox-aspm-scanner -o accuknox-aspm-scanner
         chmod +x accuknox-aspm-scanner
 
-        echo "Installing local OpenGrep binary and rules (no container image)..."
-        ./accuknox-aspm-scanner tool install --type sast
+        ENGINE_ARG=""
+        RESULT_SRC="results.jsonl"
+        RESULT_DST="results-secret.jsonl"
+        BASE_CMD="git file://."
+        if [ "$ENGINE" = "gitleaks" ]; then
+          # SARIF results.json is uploaded by the CLI as data_type=DS (secret scan findings).
+          ENGINE_ARG="--engine gitleaks"
+          RESULT_SRC="results.json"
+          RESULT_DST="results-secret.json"
+          BASE_CMD="detect --source . --report-format sarif --report-path results.json --no-banner"
+          echo "Gitleaks SARIF will be uploaded as data_type=DS (secret scan findings)."
+        fi
 
-        SOFT_FAIL_ARG=""
+        touch "./$RESULT_SRC"
+        chmod 666 "./$RESULT_SRC"
+
+        # Soft fail argument
         SOFT_FAIL="${SOFT_FAIL//[$'\t\r\n ']}"
+        SOFT_FAIL_ARG=""
         if [ "$SOFT_FAIL" = "true" ]; then
           SOFT_FAIL_ARG="--softfail"
         fi
 
-        SEVERITY_ARG=""
-        SEVERITY="${SEVERITY//[$'\t\r\n ']}"
-        if [ -n "$SEVERITY" ]; then
-          SEVERITY_ARG="--severity $SEVERITY"
+        # Build base command
+        if [ -n "$BASE_COMMAND" ]; then
+          BASE_CMD="$BASE_COMMAND"
         fi
 
-        AI_ARGS=""
-        ACCUKNOX_AI_ANALYSIS="${ACCUKNOX_AI_ANALYSIS//[$'\t\r\n ']}"
-        if [ "$ACCUKNOX_AI_ANALYSIS" = "true" ]; then
-          AI_ARGS="--ai-analysis"
+        # TruffleHog-only flags; gitleaks uses --command / additional_arguments
+        ARGS=""
+        if [ "$ENGINE" = "trufflehog" ]; then
+          [ -n "$RESULTS" ] && ARGS="$ARGS --results $RESULTS"
+          [ -n "$BRANCH" ] && ARGS="$ARGS --branch $BRANCH"
+          [ -n "$EXCLUDE_PATHS" ] && ARGS="$ARGS --exclude-paths $EXCLUDE_PATHS"
         fi
+        [ -n "$ADDITIONAL_ARGUMENTS" ] && ARGS="$ARGS $ADDITIONAL_ARGUMENTS"
 
-        echo "Running AccuKnox SAST scan with native OpenGrep..."
-        ./accuknox-aspm-scanner scan --keep-results $SOFT_FAIL_ARG sast \
-          --command "scan ." \
-          --repo-url "https://github.com/${GITHUB_REPOSITORY}.git" \
-          --commit-sha "${GITHUB_SHA}" \
-          --pipeline-id "$PIPELINE_ID" \
-          --job-url "$JOB_URL" \
-          $SEVERITY_ARG \
-          $AI_ARGS
+        echo "Running AccuKnox secret scan ($ENGINE)..."
+        echo "./accuknox-aspm-scanner scan --keep-results $SOFT_FAIL_ARG secret --command \"$BASE_CMD $ARGS\" $ENGINE_ARG --container-mode"
+        ./accuknox-aspm-scanner scan --keep-results $SOFT_FAIL_ARG secret --command "$BASE_CMD $ARGS" $ENGINE_ARG --container-mode
+
+        cp "$RESULT_SRC" "$RESULT_DST"
+
+    - name: Upload secret scan artifact
+      if: ${{ inputs.upload_results == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: secret-scan-results
+        path: |
+          results-secret.jsonl
+          results-secret.json
+        if-no-files-found: error
+        retention-days: 30
