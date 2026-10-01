@@ -32,7 +32,7 @@ inputs:
     required: false
     default: ""
   gitleaks:
-    description: "Use Gitleaks instead of TruffleHog. true writes SARIF and uploads as data type DS (secret scan findings)."
+    description: "Use the local Gitleaks binary instead of TruffleHog. true writes SARIF and uploads as data type DS (secret scan findings)."
     required: false
     default: "false"
   soft_fail:
@@ -93,12 +93,16 @@ runs:
         chmod +x accuknox-aspm-scanner
 
         ENGINE_ARG=""
+        CONTAINER_MODE_ARG="--container-mode"
         RESULT_SRC="results.jsonl"
         RESULT_DST="results-secret.jsonl"
         BASE_CMD="git file://."
         if [ "$ENGINE" = "gitleaks" ]; then
-          # SARIF results.json is uploaded by the CLI as data_type=DS (secret scan findings).
+          # Local binary, no Docker. SARIF is uploaded as data_type=DS (secret scan findings).
+          echo "Installing local Gitleaks binary..."
+          ./accuknox-aspm-scanner tool install --type gitleaks
           ENGINE_ARG="--engine gitleaks"
+          CONTAINER_MODE_ARG=""
           RESULT_SRC="results.json"
           RESULT_DST="results-secret.json"
           BASE_CMD="detect --source . --report-format sarif --report-path results.json --no-banner"
@@ -130,8 +134,8 @@ runs:
         [ -n "$ADDITIONAL_ARGUMENTS" ] && ARGS="$ARGS $ADDITIONAL_ARGUMENTS"
 
         echo "Running AccuKnox secret scan ($ENGINE)..."
-        echo "./accuknox-aspm-scanner scan --keep-results $SOFT_FAIL_ARG secret --command \"$BASE_CMD $ARGS\" $ENGINE_ARG --container-mode"
-        ./accuknox-aspm-scanner scan --keep-results $SOFT_FAIL_ARG secret --command "$BASE_CMD $ARGS" $ENGINE_ARG --container-mode
+        echo "./accuknox-aspm-scanner scan --keep-results $SOFT_FAIL_ARG secret --command \"$BASE_CMD $ARGS\" $ENGINE_ARG $CONTAINER_MODE_ARG"
+        ./accuknox-aspm-scanner scan --keep-results $SOFT_FAIL_ARG secret --command "$BASE_CMD $ARGS" $ENGINE_ARG $CONTAINER_MODE_ARG
 
         cp "$RESULT_SRC" "$RESULT_DST"
 
