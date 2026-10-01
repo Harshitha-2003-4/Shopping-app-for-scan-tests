@@ -1,4 +1,4 @@
-name: SAST action
+name: AccuKnox Secret Scan
 
 on:
   push:
@@ -11,23 +11,19 @@ permissions:
   contents: read
 
 jobs:
-  accuknox-sast:
-    name: AccuKnox SAST OpenGrep
+  secret-scan:
+    name: AccuKnox Secret Scan
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Run AccuKnox SAST
+      - name: Run AccuKnox Secret Scan
         uses: ./.github/actions/SAST
         with:
-          soft_fail: "true"
-          pipeline_id: ${{ github.run_id }}
-          job_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          accuknox_endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
           accuknox_token: ${{ secrets.ACCUKNOX_TOKEN }}
+          accuknox_endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
           accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
-          severity: "HIGH"
-          accuknox_ai_analysis: "false"
-          gitleaks: true
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          gitleaks: "true"
+          soft_fail: "true"
+          upload_results: "true"
