@@ -1,0 +1,32 @@
+name: SAST action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accuknox-sast:
+    name: AccuKnox SAST OpenGrep
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run AccuKnox SAST
+        uses: ./.github/actions/SAST
+        with:
+          soft_fail: "true"
+          pipeline_id: ${{ github.run_id }}
+          job_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          accuknox_endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
+          accuknox_token: ${{ secrets.ACCUKNOX_TOKEN }}
+          accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
+          severity: "HIGH"
+          accuknox_ai_analysis: "false"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
